@@ -94,7 +94,7 @@ for idx, row in feature_importance_d.head(5).iterrows():
 
 # Save model
 joblib.dump(diabetes_model, 'diabetes_model.pkl')
-print("\n✓ Diabetes model saved as 'diabetes_model.pkl'")
+print("\nDiabetes model saved as 'diabetes_model.pkl'")
 
 # ============================================================================
 # 2. HEART DISEASE PREDICTION MODEL
@@ -159,7 +159,7 @@ for idx, row in feature_importance_h.head(5).iterrows():
 
 # Save model
 joblib.dump(heart_model, 'heart_disease_model.pkl')
-print("\n✓ Heart disease model saved as 'heart_disease_model.pkl'")
+print("\nHeart disease model saved as 'heart_disease_model.pkl'")
 
 # ============================================================================
 # SUMMARY

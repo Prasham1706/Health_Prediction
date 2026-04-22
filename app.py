@@ -3,7 +3,7 @@ Healthcare Risk Prediction API
 Flask backend server for serving ML model predictions
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import joblib
 import numpy as np
@@ -17,7 +17,7 @@ print("Loading ML models...")
 try:
     diabetes_model = joblib.load('diabetes_model.pkl')
     heart_model = joblib.load('heart_disease_model.pkl')
-    print("✓ Models loaded successfully")
+    print("Models loaded successfully")
 except FileNotFoundError:
     print("ERROR: Model files not found. Please run 'python train_models.py' first.")
     diabetes_model = None
@@ -34,18 +34,7 @@ def health_check():
 
 @app.route('/predict/diabetes', methods=['POST'])
 def predict_diabetes():
-    """
-    Predict diabetes risk
-    Expected input features:
-    - gender (0=Female, 1=Male)
-    - age
-    - hypertension (0 or 1)
-    - heart_disease (0 or 1)
-    - smoking_history (0-5)
-    - bmi
-    - HbA1c_level
-    - blood_glucose_level
-    """
+    print("Received diabetes prediction request")
     try:
         if diabetes_model is None:
             return jsonify({'error': 'Diabetes model not loaded'}), 500
@@ -54,14 +43,14 @@ def predict_diabetes():
         
         # Extract features in correct order
         features = [
-            data.get('gender', 0),
-            data.get('age', 0),
-            data.get('hypertension', 0),
-            data.get('heart_disease', 0),
-            data.get('smoking_history', 0),
-            data.get('bmi', 0),
-            data.get('HbA1c_level', 0),
-            data.get('blood_glucose_level', 0)
+            float(data.get('gender', 0)),
+            float(data.get('age', 0)),
+            float(data.get('hypertension', 0)),
+            float(data.get('heart_disease', 0)),
+            float(data.get('smoking_history', 0)),
+            float(data.get('bmi', 0)),
+            float(data.get('HbA1c_level', 0)),
+            float(data.get('blood_glucose_level', 0))
         ]
         
         # Make prediction
@@ -77,20 +66,12 @@ def predict_diabetes():
         })
     
     except Exception as e:
+        print(f"Diabetes Prediction Error: {str(e)}")
         return jsonify({'error': str(e)}), 400
 
 @app.route('/predict/heart-disease', methods=['POST'])
 def predict_heart_disease():
-    """
-    Predict heart disease risk
-    Expected input features (all 0 or 1):
-    - Chest_Pain, Shortness_of_Breath, Fatigue, Palpitations, Dizziness
-    - Swelling, Pain_Arms_Jaw_Back, Cold_Sweats_Nausea
-    - High_BP, High_Cholesterol, Diabetes, Smoking, Obesity
-    - Sedentary_Lifestyle, Family_History, Chronic_Stress
-    - Gender (0=Female, 1=Male)
-    - Age
-    """
+    print("Received heart disease prediction request")
     try:
         if heart_model is None:
             return jsonify({'error': 'Heart disease model not loaded'}), 500
@@ -99,24 +80,24 @@ def predict_heart_disease():
         
         # Extract features in correct order (matching dataset columns)
         features = [
-            data.get('Chest_Pain', 0),
-            data.get('Shortness_of_Breath', 0),
-            data.get('Fatigue', 0),
-            data.get('Palpitations', 0),
-            data.get('Dizziness', 0),
-            data.get('Swelling', 0),
-            data.get('Pain_Arms_Jaw_Back', 0),
-            data.get('Cold_Sweats_Nausea', 0),
-            data.get('High_BP', 0),
-            data.get('High_Cholesterol', 0),
-            data.get('Diabetes', 0),
-            data.get('Smoking', 0),
-            data.get('Obesity', 0),
-            data.get('Sedentary_Lifestyle', 0),
-            data.get('Family_History', 0),
-            data.get('Chronic_Stress', 0),
-            data.get('Gender', 0),
-            data.get('Age', 0)
+            float(data.get('Chest_Pain', 0)),
+            float(data.get('Shortness_of_Breath', 0)),
+            float(data.get('Fatigue', 0)),
+            float(data.get('Palpitations', 0)),
+            float(data.get('Dizziness', 0)),
+            float(data.get('Swelling', 0)),
+            float(data.get('Pain_Arms_Jaw_Back', 0)),
+            float(data.get('Cold_Sweats_Nausea', 0)),
+            float(data.get('High_BP', 0)),
+            float(data.get('High_Cholesterol', 0)),
+            float(data.get('Diabetes', 0)),
+            float(data.get('Smoking', 0)),
+            float(data.get('Obesity', 0)),
+            float(data.get('Sedentary_Lifestyle', 0)),
+            float(data.get('Family_History', 0)),
+            float(data.get('Chronic_Stress', 0)),
+            float(data.get('Gender', 0)),
+            float(data.get('Age', 0))
         ]
         
         # Make prediction
@@ -132,43 +113,83 @@ def predict_heart_disease():
         })
     
     except Exception as e:
+        print(f"Heart Disease Prediction Error: {str(e)}")
         return jsonify({'error': str(e)}), 400
 
 @app.route('/predict/combined', methods=['POST'])
 def predict_combined():
     """
     Get both diabetes and heart disease predictions
-    Combines features from both models
     """
+    print("Received combined prediction request")
     try:
         data = request.json
         
-        # Get diabetes prediction
-        diabetes_result = predict_diabetes()
-        diabetes_data = diabetes_result.get_json()
+        # This approach is safer than calling other view functions
+        # Extract features for diabetes
+        d_features = [
+            float(data.get('gender', 0)),
+            float(data.get('age', 0)),
+            float(data.get('hypertension', 0)),
+            float(data.get('heart_disease', 0)),
+            float(data.get('smoking_history', 0)),
+            float(data.get('bmi', 0)),
+            float(data.get('HbA1c_level', 5.7)),
+            float(data.get('blood_glucose_level', 100))
+        ]
+        d_prob = diabetes_model.predict_proba(np.array([d_features]))[0][1]
         
-        # Get heart disease prediction
-        heart_result = predict_heart_disease()
-        heart_data = heart_result.get_json()
+        # Extract features for heart disease
+        h_features = [
+            float(data.get('Chest_Pain', 0)),
+            float(data.get('Shortness_of_Breath', 0)),
+            float(data.get('Fatigue', 0)),
+            float(data.get('Palpitations', 0)),
+            float(data.get('Dizziness', 0)),
+            float(data.get('Swelling', 0)),
+            float(data.get('Pain_Arms_Jaw_Back', 0)),
+            float(data.get('Cold_Sweats_Nausea', 0)),
+            float(data.get('High_BP', 0)),
+            float(data.get('High_Cholesterol', 0)),
+            float(data.get('Diabetes', 0)),
+            float(data.get('Smoking', 0)),
+            float(data.get('Obesity', 0)),
+            float(data.get('Sedentary_Lifestyle', 0)),
+            float(data.get('Family_History', 0)),
+            float(data.get('Chronic_Stress', 0)),
+            float(data.get('Gender', 0)),
+            float(data.get('Age', 0))
+        ]
+        h_prob = heart_model.predict_proba(np.array([h_features]))[0][1]
         
         # Calculate overall risk
-        overall_risk = (diabetes_data.get('risk_probability', 0) + 
-                       heart_data.get('risk_probability', 0)) / 2
+        overall_risk = (d_prob + h_prob) / 2
         
         return jsonify({
-            'diabetes': diabetes_data,
-            'heart_disease': heart_data,
-            'overall_risk_probability': overall_risk,
-            'overall_risk_percentage': overall_risk * 100,
+            'diabetes_probability': float(d_prob),
+            'heart_probability': float(h_prob),
+            'overall_risk_probability': float(overall_risk),
+            'overall_risk_percentage': float(overall_risk * 100),
             'overall_risk_level': 'High' if overall_risk > 0.5 else 'Moderate' if overall_risk > 0.3 else 'Low'
         })
     
     except Exception as e:
+        print(f"Combined Prediction Error: {str(e)}")
         return jsonify({'error': str(e)}), 400
+
+@app.route('/')
+def index():
+    """Serve the frontend index.html"""
+    return send_from_directory('.', 'index.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    """Serve other static files (css, js, etc.)"""
+    return send_from_directory('.', path)
 
 if __name__ == '__main__':
     print("\n" + "=" * 60)
-    print("Healthcare Risk Prediction API Server")
+    print("Healthcare Risk Prediction API Server (Unified)")
     print("=" * 60)
     print("\nEndpoints:")
     print("  GET  /health                  - Health check")

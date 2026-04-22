@@ -1,7 +1,7 @@
 // Healthcare Risk Prediction - Frontend JavaScript
 // Connects to ML backend API for real predictions
 
-const API_URL = 'http://localhost:5000';
+const API_URL = window.location.origin;
 
 // Smooth scroll for navigation
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -39,12 +39,22 @@ form.addEventListener('submit', async (e) => {
   submitButton.disabled = true;
   
   try {
-    // Collect form data
-    const formData = new FormData(form);
+    // Collect form data using a more robust method
     const data = {};
-    formData.forEach((value, key) => {
+    const formData = new FormData(form);
+    
+    // Convert FormData to a plain object
+    for (const [key, value] of formData.entries()) {
       data[key] = value;
+    }
+    
+    // Explicitly handle checkboxes (which are often 'on' or missing)
+    const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+      data[cb.name || cb.id] = cb.checked;
     });
+    
+    console.log('Processed Form Data:', data);
     
     // Calculate BMI
     const height = parseFloat(data.height) / 100; // convert cm to m
@@ -66,28 +76,28 @@ form.addEventListener('submit', async (e) => {
       heart_disease: 0, // We'll update this based on family history
       smoking_history: smokingMap[data.smoking] || 0,
       bmi: bmi,
-      HbA1c_level: 5.7, // Default value (would need actual test)
+      HbA1c_level: parseFloat(data.hba1c || 5.7),
       blood_glucose_level: parseInt(data.glucose)
     };
     
     // Prepare heart disease prediction data
     const heartData = {
-      Chest_Pain: 0, // Would need symptoms questionnaire
-      Shortness_of_Breath: 0,
-      Fatigue: 0,
-      Palpitations: 0,
-      Dizziness: 0,
-      Swelling: 0,
-      Pain_Arms_Jaw_Back: 0,
-      Cold_Sweats_Nausea: 0,
+      Chest_Pain: data.chestPain ? 1 : 0,
+      Shortness_of_Breath: data.breathShortness ? 1 : 0,
+      Fatigue: data.fatigue ? 1 : 0,
+      Palpitations: data.palpitations ? 1 : 0,
+      Dizziness: data.dizziness ? 1 : 0,
+      Swelling: data.swelling ? 1 : 0,
+      Pain_Arms_Jaw_Back: data.painRadiation ? 1 : 0,
+      Cold_Sweats_Nausea: data.nauseaSweats ? 1 : 0,
       High_BP: parseInt(data.systolic) > 140 || parseInt(data.diastolic) > 90 ? 1 : 0,
       High_Cholesterol: parseInt(data.cholesterol) > 240 ? 1 : 0,
-      Diabetes: 0, // Will be updated from diabetes prediction
+      Diabetes: parseFloat(data.hba1c) > 6.5 || parseInt(data.glucose) > 126 ? 1 : 0,
       Smoking: data.smoking === 'current' ? 1 : 0,
       Obesity: bmi > 30 ? 1 : 0,
       Sedentary_Lifestyle: parseFloat(data.exercise) < 2 ? 1 : 0,
       Family_History: data.familyHeartDisease ? 1 : 0,
-      Chronic_Stress: 0, // Would need stress assessment
+      Chronic_Stress: data.chronicStress ? 1 : 0,
       Gender: data.gender === 'male' ? 1 : 0,
       Age: parseInt(data.age)
     };
